@@ -21,7 +21,11 @@ button{font-family:inherit;cursor:pointer}
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ─── PASTE YOUR GOOGLE SCRIPT URL HERE ──────────────────────────────────────
+const SCRIPT_URL = 'PASTE_YOUR_URL_HERE';
+// ────────────────────────────────────────────────────────────────────────────
 
 const PLAYERS = [
   'Mike','Mars','Mark','Andy','René',
@@ -51,76 +55,118 @@ const GAMES = [
   {id:18, date:'Sun 20 Sep',time:'11:00', opp:'Double Stars Heiloo',   home:false},
 ];
 
-const KEY = 'alcmaria_u70_2026';
-
 const STATUS = {
-  yes:   {label:'✓  Yes',    bg:'#0e3d2b', border:'#1a6645', text:'#34d399', active:'#0a3525'},
-  maybe: {label:'?  Maybe',  bg:'#3d2e0e', border:'#7a5a1a', text:'#f59e0b', active:'#33240c'},
-  no:    {label:'✗  No',     bg:'#3d0e0e', border:'#6b1a1a', text:'#f87171', active:'#320c0c'},
+  yes:   {label:'✓  Yes',   bg:'#0e3d2b', border:'#1a6645', text:'#34d399'},
+  maybe: {label:'?  Maybe', bg:'#3d2e0e', border:'#7a5a1a', text:'#f59e0b'},
+  no:    {label:'✗  No',    bg:'#3d0e0e', border:'#6b1a1a', text:'#f87171'},
 };
 
-const styles = {
-  page:        {maxWidth:480,margin:'0 auto',padding:'0 0 80px'},
-  header:      {padding:'20px 20px 16px',borderBottom:'1px solid #1c2338'},
-  tag:         {fontSize:11,letterSpacing:'0.14em',textTransform:'uppercase',color:'#5a6282',fontFamily:'Oswald, sans-serif',marginBottom:4},
-  title:       {fontFamily:'Oswald, sans-serif',fontSize:26,fontWeight:600,letterSpacing:'0.03em',color:'#f0ede8',lineHeight:1.1},
-  subtitle:    {fontSize:13,color:'#5a6282',marginTop:4},
-  sectionLabel:{padding:'16px 20px 8px',fontSize:11,letterSpacing:'0.12em',textTransform:'uppercase',color:'#5a6282',fontFamily:'Oswald, sans-serif'},
-  grid:        {display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,padding:'0 16px'},
-  playerBtn:   {background:'#141929',border:'1px solid #1c2338',borderRadius:10,padding:'10px 8px',cursor:'pointer',textAlign:'center',transition:'all .15s'},
-  playerName:  {fontSize:14,fontWeight:500,color:'#ccc9c0',letterSpacing:'0.01em'},
-  playerSub:   {fontSize:11,color:'#5a6282',marginTop:2},
-  overviewBtn: {margin:'12px 16px 0',width:'calc(100% - 32px)',background:'transparent',border:'1px solid #1c2338',borderRadius:10,padding:12,fontSize:13,color:'#5a6282',letterSpacing:'0.03em',transition:'all .15s'},
-  backBtn:     {background:'none',border:'none',padding:'0 4px',fontSize:22,color:'#5a6282',lineHeight:1,marginRight:12},
-  gameCard:    {margin:'0 12px 8px',background:'#141929',border:'1px solid #1c2338',borderRadius:12,padding:'12px 14px'},
-  gameOpp:     {fontSize:15,fontWeight:500,color:'#e8e4dc'},
-  gameMeta:    {fontSize:12,color:'#5a6282',marginTop:3,display:'flex',gap:8,alignItems:'center'},
-  homeBadge:   {fontSize:10,padding:'1px 6px',borderRadius:4,fontWeight:500,letterSpacing:'0.06em',textTransform:'uppercase'},
-  btnRow:      {display:'flex',gap:6,marginTop:10},
-  statBtn:     {flex:1,padding:'8px 4px',fontSize:12,fontWeight:500,borderRadius:8,border:'1px solid',cursor:'pointer',transition:'all .15s',letterSpacing:'0.02em'},
-  dot:         {width:8,height:8,borderRadius:'50%',display:'inline-block',marginRight:5},
-  legend:      {display:'flex',gap:14,padding:'0 20px 12px',fontSize:12,color:'#5a6282'},
-  overCard:    {margin:'0 12px 8px',background:'#141929',border:'1px solid #1c2338',borderRadius:12,padding:'12px 14px'},
-  overHead:    {display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10},
-  badge:       {fontSize:11,padding:'2px 8px',borderRadius:5,fontWeight:500},
-  tagRow:      {display:'flex',flexWrap:'wrap',gap:5},
-  pill:        {fontSize:11,padding:'3px 9px',borderRadius:20,border:'1px solid',fontWeight:400},
-  redBar:      {background:'#e8334a',height:3,borderRadius:2,marginBottom:0},
+const s = {
+  page:      {maxWidth:480,margin:'0 auto',padding:'0 0 80px'},
+  header:    {padding:'20px 20px 16px',borderBottom:'1px solid #1c2338'},
+  tag:       {fontSize:11,letterSpacing:'0.14em',textTransform:'uppercase',color:'#5a6282',fontFamily:'Oswald,sans-serif',marginBottom:4},
+  title:     {fontFamily:'Oswald,sans-serif',fontSize:26,fontWeight:600,letterSpacing:'0.03em',color:'#f0ede8',lineHeight:1.1},
+  subtitle:  {fontSize:13,color:'#5a6282',marginTop:4},
+  secLabel:  {padding:'16px 20px 8px',fontSize:11,letterSpacing:'0.12em',textTransform:'uppercase',color:'#5a6282',fontFamily:'Oswald,sans-serif'},
+  grid:      {display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,padding:'0 16px'},
+  pBtn:      {background:'#141929',border:'1px solid #1c2338',borderRadius:10,padding:'10px 8px',cursor:'pointer',textAlign:'center',transition:'all .15s'},
+  pName:     {fontSize:14,fontWeight:500,color:'#ccc9c0'},
+  pSub:      {fontSize:11,color:'#5a6282',marginTop:2},
+  ovBtn:     {margin:'12px 16px 0',width:'calc(100% - 32px)',background:'transparent',border:'1px solid #1c2338',borderRadius:10,padding:12,fontSize:13,color:'#5a6282',letterSpacing:'0.03em',transition:'all .15s'},
+  back:      {background:'none',border:'none',padding:'0 4px',fontSize:22,color:'#5a6282',lineHeight:1,marginRight:12},
+  gameCard:  {margin:'0 12px 8px',background:'#141929',border:'1px solid #1c2338',borderRadius:12,padding:'12px 14px'},
+  gameOpp:   {fontSize:15,fontWeight:500,color:'#e8e4dc'},
+  gameMeta:  {fontSize:12,color:'#5a6282',marginTop:3,display:'flex',gap:8,alignItems:'center'},
+  homeBadge: {fontSize:10,padding:'1px 6px',borderRadius:4,fontWeight:500,letterSpacing:'0.06em',textTransform:'uppercase'},
+  btnRow:    {display:'flex',gap:6,marginTop:10},
+  statBtn:   {flex:1,padding:'8px 4px',fontSize:12,fontWeight:500,borderRadius:8,border:'1px solid',cursor:'pointer',transition:'all .15s'},
+  overCard:  {margin:'0 12px 8px',background:'#141929',border:'1px solid #1c2338',borderRadius:12,padding:'12px 14px'},
+  overHead:  {display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10},
+  badge:     {fontSize:11,padding:'2px 8px',borderRadius:5,fontWeight:500},
+  tagRow:    {display:'flex',flexWrap:'wrap',gap:5},
+  pill:      {fontSize:11,padding:'3px 9px',borderRadius:20,border:'1px solid',fontWeight:400},
+  redBar:    {background:'#e8334a',height:3,borderRadius:0},
+  dot:       {width:8,height:8,borderRadius:'50%',display:'inline-block',marginRight:5},
 };
+
+// ─── Data layer ──────────────────────────────────────────────────────────────
 
 function useAttendance() {
-  const [data, setData] = useState({});
+  const [data, setData]       = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const pendingRef            = useRef({});
+
+  // Load all data on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KEY);
-      if (saved) setData(JSON.parse(saved));
-    } catch {}
+    fetch(SCRIPT_URL + '?action=get', { redirect: 'follow' })
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setError('Could not load data. Check your Script URL.'); setLoading(false); });
   }, []);
-  const save = useCallback((next) => {
-    setData(next);
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-  }, []);
+
   const mark = useCallback((player, gameId, status) => {
-    save(prev => {
+    // Optimistic local update
+    setData(prev => {
       const cur = prev[player]?.[gameId];
       const val = cur === status ? null : status;
-      const updated = { ...prev, [player]: { ...(prev[player]||{}), [gameId]: val } };
-      if (!val) delete updated[player][gameId];
-      return updated;
+      const next = { ...prev, [player]: { ...(prev[player] || {}), [gameId]: val } };
+      if (!val) delete next[player][gameId];
+      return next;
     });
-  }, [save]);
-  return { data, mark };
+
+    // Debounce network call per (player, gameId)
+    const key = `${player}_${gameId}`;
+    clearTimeout(pendingRef.current[key]);
+    pendingRef.current[key] = setTimeout(() => {
+      const cur = data[player]?.[gameId];
+      const val = cur === status ? null : status;
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify({ player, gameId, status: val }),
+      }).catch(() => {}); // silent fail — optimistic update already applied
+    }, 300);
+  }, [data]);
+
+  return { data, loading, error, mark };
+}
+
+// ─── Screens ─────────────────────────────────────────────────────────────────
+
+function Spinner() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'60vh',gap:16}}>
+      <div style={{
+        width:36,height:36,borderRadius:'50%',
+        border:'3px solid #1c2338',borderTopColor:'#e8334a',
+        animation:'spin 0.8s linear infinite',
+      }}></div>
+      <div style={{fontSize:13,color:'#5a6282'}}>Loading attendance data…</div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+function ErrorScreen({ message }) {
+  return (
+    <div style={{padding:'40px 20px',textAlign:'center'}}>
+      <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+      <div style={{fontSize:15,color:'#f87171',marginBottom:8}}>Connection error</div>
+      <div style={{fontSize:13,color:'#5a6282',lineHeight:1.6}}>{message}</div>
+    </div>
+  );
 }
 
 function Header({ onBack, player, subtitle }) {
   return (
-    <div style={styles.header}>
+    <div style={s.header}>
       <div style={{display:'flex',alignItems:'center'}}>
-        {onBack && <button style={styles.backBtn} onClick={onBack}>←</button>}
+        {onBack && <button style={s.back} onClick={onBack}>←</button>}
         <div>
-          <div style={styles.tag}>Alcmaria Victrix · U70</div>
-          <div style={styles.title}>{player || 'Attendance 2026'}</div>
-          {subtitle && <div style={styles.subtitle}>{subtitle}</div>}
+          <div style={s.tag}>Alcmaria Victrix · U70</div>
+          <div style={s.title}>{player || 'Attendance 2026'}</div>
+          {subtitle && <div style={s.subtitle}>{subtitle}</div>}
         </div>
       </div>
     </div>
@@ -129,30 +175,28 @@ function Header({ onBack, player, subtitle }) {
 
 function SelectScreen({ data, onSelect, onOverview }) {
   return (
-    <div style={styles.page}>
+    <div style={s.page}>
       <Header />
-      <div style={{...styles.redBar,margin:'0 0 0'}}></div>
-      <div style={styles.sectionLabel}>Who are you?</div>
-      <div style={styles.grid}>
+      <div style={s.redBar}></div>
+      <div style={s.secLabel}>Who are you?</div>
+      <div style={s.grid}>
         {PLAYERS.map(p => {
-          const filled = Object.values(data[p]||{}).filter(v=>v==='yes').length;
-          const total  = Object.values(data[p]||{}).filter(Boolean).length;
+          const filled = Object.values(data[p]||{}).filter(Boolean).length;
+          const yes    = Object.values(data[p]||{}).filter(v=>v==='yes').length;
           return (
-            <button key={p}
-              style={{...styles.playerBtn}}
+            <button key={p} style={s.pBtn}
               onMouseEnter={e=>{e.currentTarget.style.background='#1a2035';e.currentTarget.style.borderColor='#2a3455'}}
               onMouseLeave={e=>{e.currentTarget.style.background='#141929';e.currentTarget.style.borderColor='#1c2338'}}
               onClick={()=>onSelect(p)}>
-              <div style={styles.playerName}>{p}</div>
-              {total>0
-                ? <div style={styles.playerSub}>{filled} yes · {total}/18</div>
-                : <div style={styles.playerSub}>not filled</div>
-              }
+              <div style={s.pName}>{p}</div>
+              {filled > 0
+                ? <div style={s.pSub}>{yes} yes · {filled}/18</div>
+                : <div style={s.pSub}>not filled</div>}
             </button>
           );
         })}
       </div>
-      <button style={styles.overviewBtn}
+      <button style={s.ovBtn}
         onMouseEnter={e=>{e.currentTarget.style.borderColor='#2a3455';e.currentTarget.style.color='#9ca3bf'}}
         onMouseLeave={e=>{e.currentTarget.style.borderColor='#1c2338';e.currentTarget.style.color='#5a6282'}}
         onClick={onOverview}>
@@ -163,42 +207,34 @@ function SelectScreen({ data, onSelect, onOverview }) {
 }
 
 function PlayerScreen({ player, data, mark, onBack }) {
-  const myData = data[player] || {};
+  const myData   = data[player] || {};
   const yesCount = Object.values(myData).filter(v=>v==='yes').length;
   const filled   = Object.values(myData).filter(Boolean).length;
 
   return (
-    <div style={styles.page}>
-      <Header
-        onBack={onBack}
-        player={player}
-        subtitle={`${yesCount} confirmed · ${18-filled} games left to fill`}
-      />
-      <div style={{...styles.redBar}}></div>
+    <div style={s.page}>
+      <Header onBack={onBack} player={player}
+        subtitle={`${yesCount} confirmed · ${18-filled} games left to fill`} />
+      <div style={s.redBar}></div>
       <div style={{height:12}}></div>
       {GAMES.map(g => {
         const status = myData[g.id];
         return (
-          <div key={g.id} style={styles.gameCard}>
-            <div style={styles.gameOpp}>{g.opp}</div>
-            <div style={styles.gameMeta}>
-              <span>{g.date}</span>
-              <span>·</span>
-              <span>{g.time}</span>
-              <span>·</span>
-              <span style={{
-                ...styles.homeBadge,
-                background: g.home ? '#0e2d1a' : '#1a1e2d',
-                color: g.home ? '#34d399' : '#5a6282',
-              }}>{g.home ? 'Home' : 'Away'}</span>
+          <div key={g.id} style={s.gameCard}>
+            <div style={s.gameOpp}>{g.opp}</div>
+            <div style={s.gameMeta}>
+              <span>{g.date}</span><span>·</span><span>{g.time}</span><span>·</span>
+              <span style={{...s.homeBadge,background:g.home?'#0e2d1a':'#1a1e2d',color:g.home?'#34d399':'#5a6282'}}>
+                {g.home ? 'Home' : 'Away'}
+              </span>
             </div>
-            <div style={styles.btnRow}>
-              {Object.entries(STATUS).map(([s, cfg]) => {
-                const active = status === s;
+            <div style={s.btnRow}>
+              {Object.entries(STATUS).map(([k, cfg]) => {
+                const active = status === k;
                 return (
-                  <button key={s} onClick={() => mark(player, g.id, s)}
+                  <button key={k} onClick={() => mark(player, g.id, k)}
                     style={{
-                      ...styles.statBtn,
+                      ...s.statBtn,
                       background: active ? cfg.bg : 'transparent',
                       borderColor: active ? cfg.border : '#252d45',
                       color: active ? cfg.text : '#3d4460',
@@ -217,66 +253,53 @@ function PlayerScreen({ player, data, mark, onBack }) {
 }
 
 function OverviewScreen({ data, onBack }) {
-  const totalPlayers = PLAYERS.length;
-
   return (
-    <div style={styles.page}>
+    <div style={s.page}>
       <Header onBack={onBack} player="Coach Overview" subtitle="Season 2026 · All games" />
-      <div style={{...styles.redBar}}></div>
+      <div style={s.redBar}></div>
       <div style={{display:'flex',gap:16,padding:'12px 20px 4px'}}>
-        {[
-          ['#34d399','Yes'],
-          ['#f59e0b','Maybe'],
-          ['#f87171','No'],
-          ['#2a3150','–'],
-        ].map(([color,label])=>(
-          <div key={label} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'#5a6282'}}>
-            <div style={{...styles.dot,background:color}}></div>{label}
+        {[['#34d399','Yes'],['#f59e0b','Maybe'],['#f87171','No'],['#2a3150','–']].map(([c,l])=>(
+          <div key={l} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'#5a6282'}}>
+            <div style={{...s.dot,background:c}}></div>{l}
           </div>
         ))}
       </div>
-
       {GAMES.map(g => {
-        let yes=0, no=0, maybe=0;
+        let yes=0,no=0,maybe=0;
         PLAYERS.forEach(p => {
-          const s = data[p]?.[g.id];
-          if (s==='yes') yes++;
-          else if (s==='no') no++;
-          else if (s==='maybe') maybe++;
+          const st = data[p]?.[g.id];
+          if (st==='yes') yes++;
+          else if (st==='no') no++;
+          else if (st==='maybe') maybe++;
         });
-        const empty = totalPlayers - yes - no - maybe;
-
+        const empty = PLAYERS.length - yes - no - maybe;
         return (
-          <div key={g.id} style={styles.overCard}>
-            <div style={styles.overHead}>
+          <div key={g.id} style={s.overCard}>
+            <div style={s.overHead}>
               <div>
                 <div style={{fontSize:14,fontWeight:500,color:'#ccc9c0'}}>{g.opp}</div>
                 <div style={{fontSize:12,color:'#5a6282',marginTop:2}}>
-                  {g.date} · {g.time}
-                  {' '}·{' '}
-                  <span style={{color: g.home ? '#34d399' : '#5a6282'}}>
-                    {g.home ? 'Home' : 'Away'}
-                  </span>
+                  {g.date} · {g.time} ·{' '}
+                  <span style={{color:g.home?'#34d399':'#5a6282'}}>{g.home?'Home':'Away'}</span>
                 </div>
               </div>
               <div style={{display:'flex',gap:6,flexShrink:0}}>
-                <span style={{...styles.badge,background:'#0e3d2b',color:'#34d399'}}>{yes}</span>
-                {maybe > 0 && <span style={{...styles.badge,background:'#3d2e0e',color:'#f59e0b'}}>{maybe}?</span>}
-                {empty > 0 && <span style={{...styles.badge,background:'#1c2338',color:'#5a6282'}}>{empty}–</span>}
+                <span style={{...s.badge,background:'#0e3d2b',color:'#34d399'}}>{yes}</span>
+                {maybe>0 && <span style={{...s.badge,background:'#3d2e0e',color:'#f59e0b'}}>{maybe}?</span>}
+                {empty>0 && <span style={{...s.badge,background:'#1c2338',color:'#5a6282'}}>{empty}–</span>}
               </div>
             </div>
-
-            <div style={styles.tagRow}>
+            <div style={s.tagRow}>
               {PLAYERS.map(p => {
-                const s = data[p]?.[g.id];
-                const cfg = s ? STATUS[s] : null;
+                const st = data[p]?.[g.id];
+                const cfg = st ? STATUS[st] : null;
                 return (
                   <div key={p} style={{
-                    ...styles.pill,
+                    ...s.pill,
                     background: cfg ? cfg.bg : '#0f1420',
                     borderColor: cfg ? cfg.border : '#1c2338',
                     color: cfg ? cfg.text : '#2a3150',
-                    fontWeight: s==='yes' ? 500 : 400,
+                    fontWeight: st==='yes' ? 500 : 400,
                   }}>{p}</div>
                 );
               })}
@@ -288,32 +311,26 @@ function OverviewScreen({ data, onBack }) {
   );
 }
 
+// ─── Root ─────────────────────────────────────────────────────────────────────
+
 function App() {
   const [screen, setScreen] = useState('select');
-  const [player, setPlayer]  = useState(null);
-  const { data, mark }       = useAttendance();
+  const [player, setPlayer] = useState(null);
+  const { data, loading, error, mark } = useAttendance();
+
+  if (loading) return <Spinner />;
+  if (error)   return <ErrorScreen message={error} />;
 
   if (screen === 'player') return (
-    <PlayerScreen
-      player={player}
-      data={data}
-      mark={mark}
-      onBack={() => setScreen('select')}
-    />
+    <PlayerScreen player={player} data={data} mark={mark} onBack={()=>setScreen('select')} />
   );
-
   if (screen === 'overview') return (
-    <OverviewScreen
-      data={data}
-      onBack={() => setScreen('select')}
-    />
+    <OverviewScreen data={data} onBack={()=>setScreen('select')} />
   );
-
   return (
-    <SelectScreen
-      data={data}
-      onSelect={p => { setPlayer(p); setScreen('player'); }}
-      onOverview={() => setScreen('overview')}
+    <SelectScreen data={data}
+      onSelect={p=>{setPlayer(p);setScreen('player');}}
+      onOverview={()=>setScreen('overview')}
     />
   );
 }
