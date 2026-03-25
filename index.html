@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>U70 · Alcmaria Victrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0b0f1a;color:#f0ede8;font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.5;overscroll-behavior:none}
+#root{min-height:100vh}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a3150;border-radius:2px}
+button{font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+const PLAYERS = [
+  'Mike','Mars','Mark','Andy','René',
+  'Jur','Jamil','Rop','Rich','Dylan',
+  'Jeroen','Kiran','Michael','Stewy','Sjoerd',
+  'Scott','Byron','Djesse','Gio'
+];
+
+const GAMES = [
+  {id:1,  date:'Sat 4 Apr', time:'17:00', opp:'Quick Amsterdam',       home:true},
+  {id:2,  date:'Sat 11 Apr',time:'14:00', opp:'Flying Petrels',        home:false},
+  {id:3,  date:'Sat 18 Apr',time:'17:00', opp:'Urbanus',               home:true},
+  {id:4,  date:'Sun 3 May', time:'14:00', opp:'Amsterdam North Stars', home:false},
+  {id:5,  date:'Sat 9 May', time:'17:00', opp:'Cromtigers',            home:true},
+  {id:6,  date:'Sat 16 May',time:'17:30', opp:'Red Stars Vitesse',     home:false},
+  {id:7,  date:'Sat 23 May',time:'13:00', opp:'Quick Amsterdam',       home:false},
+  {id:8,  date:'Sat 30 May',time:'17:00', opp:'Double Stars Heiloo',   home:true},
+  {id:9,  date:'Sat 6 Jun', time:'17:00', opp:'Rooswijk',              home:false},
+  {id:10, date:'Sat 13 Jun',time:'17:00', opp:'Rangers',               home:true},
+  {id:11, date:'Sat 20 Jun',time:'15:00', opp:'Odiz Frogs',            home:false},
+  {id:12, date:'Wed 24 Jun',time:'17:00', opp:'Odiz Frogs',            home:true},
+  {id:13, date:'Sat 4 Jul', time:'17:00', opp:'Flying Petrels',        home:true},
+  {id:14, date:'Sun 12 Jul',time:'11:30', opp:'Urbanus',               home:false},
+  {id:15, date:'Sat 29 Aug',time:'17:00', opp:'Amsterdam North Stars', home:true},
+  {id:16, date:'Sun 6 Sep', time:'17:00', opp:'Cromtigers',            home:false},
+  {id:17, date:'Sat 12 Sep',time:'17:00', opp:'Red Stars Vitesse',     home:true},
+  {id:18, date:'Sun 20 Sep',time:'11:00', opp:'Double Stars Heiloo',   home:false},
+];
+
+const KEY = 'alcmaria_u70_2026';
+
+const STATUS = {
+  yes:   {label:'✓  Yes',    bg:'#0e3d2b', border:'#1a6645', text:'#34d399', active:'#0a3525'},
+  maybe: {label:'?  Maybe',  bg:'#3d2e0e', border:'#7a5a1a', text:'#f59e0b', active:'#33240c'},
+  no:    {label:'✗  No',     bg:'#3d0e0e', border:'#6b1a1a', text:'#f87171', active:'#320c0c'},
+};
+
+const styles = {
+  page:        {maxWidth:480,margin:'0 auto',padding:'0 0 80px'},
+  header:      {padding:'20px 20px 16px',borderBottom:'1px solid #1c2338'},
+  tag:         {fontSize:11,letterSpacing:'0.14em',textTransform:'uppercase',color:'#5a6282',fontFamily:'Oswald, sans-serif',marginBottom:4},
+  title:       {fontFamily:'Oswald, sans-serif',fontSize:26,fontWeight:600,letterSpacing:'0.03em',color:'#f0ede8',lineHeight:1.1},
+  subtitle:    {fontSize:13,color:'#5a6282',marginTop:4},
+  sectionLabel:{padding:'16px 20px 8px',fontSize:11,letterSpacing:'0.12em',textTransform:'uppercase',color:'#5a6282',fontFamily:'Oswald, sans-serif'},
+  grid:        {display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,padding:'0 16px'},
+  playerBtn:   {background:'#141929',border:'1px solid #1c2338',borderRadius:10,padding:'10px 8px',cursor:'pointer',textAlign:'center',transition:'all .15s'},
+  playerName:  {fontSize:14,fontWeight:500,color:'#ccc9c0',letterSpacing:'0.01em'},
+  playerSub:   {fontSize:11,color:'#5a6282',marginTop:2},
+  overviewBtn: {margin:'12px 16px 0',width:'calc(100% - 32px)',background:'transparent',border:'1px solid #1c2338',borderRadius:10,padding:12,fontSize:13,color:'#5a6282',letterSpacing:'0.03em',transition:'all .15s'},
+  backBtn:     {background:'none',border:'none',padding:'0 4px',fontSize:22,color:'#5a6282',lineHeight:1,marginRight:12},
+  gameCard:    {margin:'0 12px 8px',background:'#141929',border:'1px solid #1c2338',borderRadius:12,padding:'12px 14px'},
+  gameOpp:     {fontSize:15,fontWeight:500,color:'#e8e4dc'},
+  gameMeta:    {fontSize:12,color:'#5a6282',marginTop:3,display:'flex',gap:8,alignItems:'center'},
+  homeBadge:   {fontSize:10,padding:'1px 6px',borderRadius:4,fontWeight:500,letterSpacing:'0.06em',textTransform:'uppercase'},
+  btnRow:      {display:'flex',gap:6,marginTop:10},
+  statBtn:     {flex:1,padding:'8px 4px',fontSize:12,fontWeight:500,borderRadius:8,border:'1px solid',cursor:'pointer',transition:'all .15s',letterSpacing:'0.02em'},
+  dot:         {width:8,height:8,borderRadius:'50%',display:'inline-block',marginRight:5},
+  legend:      {display:'flex',gap:14,padding:'0 20px 12px',fontSize:12,color:'#5a6282'},
+  overCard:    {margin:'0 12px 8px',background:'#141929',border:'1px solid #1c2338',borderRadius:12,padding:'12px 14px'},
+  overHead:    {display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10},
+  badge:       {fontSize:11,padding:'2px 8px',borderRadius:5,fontWeight:500},
+  tagRow:      {display:'flex',flexWrap:'wrap',gap:5},
+  pill:        {fontSize:11,padding:'3px 9px',borderRadius:20,border:'1px solid',fontWeight:400},
+  redBar:      {background:'#e8334a',height:3,borderRadius:2,marginBottom:0},
+};
+
+function useAttendance() {
+  const [data, setData] = useState({});
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(KEY);
+      if (saved) setData(JSON.parse(saved));
+    } catch {}
+  }, []);
+  const save = useCallback((next) => {
+    setData(next);
+    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+  }, []);
+  const mark = useCallback((player, gameId, status) => {
+    save(prev => {
+      const cur = prev[player]?.[gameId];
+      const val = cur === status ? null : status;
+      const updated = { ...prev, [player]: { ...(prev[player]||{}), [gameId]: val } };
+      if (!val) delete updated[player][gameId];
+      return updated;
+    });
+  }, [save]);
+  return { data, mark };
+}
+
+function Header({ onBack, player, subtitle }) {
+  return (
+    <div style={styles.header}>
+      <div style={{display:'flex',alignItems:'center'}}>
+        {onBack && <button style={styles.backBtn} onClick={onBack}>←</button>}
+        <div>
+          <div style={styles.tag}>Alcmaria Victrix · U70</div>
+          <div style={styles.title}>{player || 'Attendance 2026'}</div>
+          {subtitle && <div style={styles.subtitle}>{subtitle}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectScreen({ data, onSelect, onOverview }) {
+  return (
+    <div style={styles.page}>
+      <Header />
+      <div style={{...styles.redBar,margin:'0 0 0'}}></div>
+      <div style={styles.sectionLabel}>Who are you?</div>
+      <div style={styles.grid}>
+        {PLAYERS.map(p => {
+          const filled = Object.values(data[p]||{}).filter(v=>v==='yes').length;
+          const total  = Object.values(data[p]||{}).filter(Boolean).length;
+          return (
+            <button key={p}
+              style={{...styles.playerBtn}}
+              onMouseEnter={e=>{e.currentTarget.style.background='#1a2035';e.currentTarget.style.borderColor='#2a3455'}}
+              onMouseLeave={e=>{e.currentTarget.style.background='#141929';e.currentTarget.style.borderColor='#1c2338'}}
+              onClick={()=>onSelect(p)}>
+              <div style={styles.playerName}>{p}</div>
+              {total>0
+                ? <div style={styles.playerSub}>{filled} yes · {total}/18</div>
+                : <div style={styles.playerSub}>not filled</div>
+              }
+            </button>
+          );
+        })}
+      </div>
+      <button style={styles.overviewBtn}
+        onMouseEnter={e=>{e.currentTarget.style.borderColor='#2a3455';e.currentTarget.style.color='#9ca3bf'}}
+        onMouseLeave={e=>{e.currentTarget.style.borderColor='#1c2338';e.currentTarget.style.color='#5a6282'}}
+        onClick={onOverview}>
+        Coach overview →
+      </button>
+    </div>
+  );
+}
+
+function PlayerScreen({ player, data, mark, onBack }) {
+  const myData = data[player] || {};
+  const yesCount = Object.values(myData).filter(v=>v==='yes').length;
+  const filled   = Object.values(myData).filter(Boolean).length;
+
+  return (
+    <div style={styles.page}>
+      <Header
+        onBack={onBack}
+        player={player}
+        subtitle={`${yesCount} confirmed · ${18-filled} games left to fill`}
+      />
+      <div style={{...styles.redBar}}></div>
+      <div style={{height:12}}></div>
+      {GAMES.map(g => {
+        const status = myData[g.id];
+        return (
+          <div key={g.id} style={styles.gameCard}>
+            <div style={styles.gameOpp}>{g.opp}</div>
+            <div style={styles.gameMeta}>
+              <span>{g.date}</span>
+              <span>·</span>
+              <span>{g.time}</span>
+              <span>·</span>
+              <span style={{
+                ...styles.homeBadge,
+                background: g.home ? '#0e2d1a' : '#1a1e2d',
+                color: g.home ? '#34d399' : '#5a6282',
+              }}>{g.home ? 'Home' : 'Away'}</span>
+            </div>
+            <div style={styles.btnRow}>
+              {Object.entries(STATUS).map(([s, cfg]) => {
+                const active = status === s;
+                return (
+                  <button key={s} onClick={() => mark(player, g.id, s)}
+                    style={{
+                      ...styles.statBtn,
+                      background: active ? cfg.bg : 'transparent',
+                      borderColor: active ? cfg.border : '#252d45',
+                      color: active ? cfg.text : '#3d4460',
+                      transform: active ? 'scale(1.02)' : 'scale(1)',
+                    }}>
+                    {cfg.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OverviewScreen({ data, onBack }) {
+  const totalPlayers = PLAYERS.length;
+
+  return (
+    <div style={styles.page}>
+      <Header onBack={onBack} player="Coach Overview" subtitle="Season 2026 · All games" />
+      <div style={{...styles.redBar}}></div>
+      <div style={{display:'flex',gap:16,padding:'12px 20px 4px'}}>
+        {[
+          ['#34d399','Yes'],
+          ['#f59e0b','Maybe'],
+          ['#f87171','No'],
+          ['#2a3150','–'],
+        ].map(([color,label])=>(
+          <div key={label} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'#5a6282'}}>
+            <div style={{...styles.dot,background:color}}></div>{label}
+          </div>
+        ))}
+      </div>
+
+      {GAMES.map(g => {
+        let yes=0, no=0, maybe=0;
+        PLAYERS.forEach(p => {
+          const s = data[p]?.[g.id];
+          if (s==='yes') yes++;
+          else if (s==='no') no++;
+          else if (s==='maybe') maybe++;
+        });
+        const empty = totalPlayers - yes - no - maybe;
+
+        return (
+          <div key={g.id} style={styles.overCard}>
+            <div style={styles.overHead}>
+              <div>
+                <div style={{fontSize:14,fontWeight:500,color:'#ccc9c0'}}>{g.opp}</div>
+                <div style={{fontSize:12,color:'#5a6282',marginTop:2}}>
+                  {g.date} · {g.time}
+                  {' '}·{' '}
+                  <span style={{color: g.home ? '#34d399' : '#5a6282'}}>
+                    {g.home ? 'Home' : 'Away'}
+                  </span>
+                </div>
+              </div>
+              <div style={{display:'flex',gap:6,flexShrink:0}}>
+                <span style={{...styles.badge,background:'#0e3d2b',color:'#34d399'}}>{yes}</span>
+                {maybe > 0 && <span style={{...styles.badge,background:'#3d2e0e',color:'#f59e0b'}}>{maybe}?</span>}
+                {empty > 0 && <span style={{...styles.badge,background:'#1c2338',color:'#5a6282'}}>{empty}–</span>}
+              </div>
+            </div>
+
+            <div style={styles.tagRow}>
+              {PLAYERS.map(p => {
+                const s = data[p]?.[g.id];
+                const cfg = s ? STATUS[s] : null;
+                return (
+                  <div key={p} style={{
+                    ...styles.pill,
+                    background: cfg ? cfg.bg : '#0f1420',
+                    borderColor: cfg ? cfg.border : '#1c2338',
+                    color: cfg ? cfg.text : '#2a3150',
+                    fontWeight: s==='yes' ? 500 : 400,
+                  }}>{p}</div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function App() {
+  const [screen, setScreen] = useState('select');
+  const [player, setPlayer]  = useState(null);
+  const { data, mark }       = useAttendance();
+
+  if (screen === 'player') return (
+    <PlayerScreen
+      player={player}
+      data={data}
+      mark={mark}
+      onBack={() => setScreen('select')}
+    />
+  );
+
+  if (screen === 'overview') return (
+    <OverviewScreen
+      data={data}
+      onBack={() => setScreen('select')}
+    />
+  );
+
+  return (
+    <SelectScreen
+      data={data}
+      onSelect={p => { setPlayer(p); setScreen('player'); }}
+      onOverview={() => setScreen('overview')}
+    />
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
