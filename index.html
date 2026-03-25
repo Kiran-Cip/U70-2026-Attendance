@@ -91,16 +91,26 @@ const s = {
 
 // ─── Data layer ──────────────────────────────────────────────────────────────
 
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    window[cb] = (data) => { resolve(data); delete window[cb]; script.remove(); };
+    script.onerror = () => { reject(new Error('JSONP failed')); delete window[cb]; script.remove(); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    document.head.appendChild(script);
+  });
+}
+
 function useAttendance() {
   const [data, setData]       = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const pendingRef            = useRef({});
 
-  // Load all data on mount
+  // Load all data on mount via JSONP (bypasses CORS)
   useEffect(() => {
-    fetch(SCRIPT_URL + '?action=get', { redirect: 'follow' })
-      .then(r => r.json())
+    jsonp(SCRIPT_URL + '?action=get')
       .then(d => { setData(d); setLoading(false); })
       .catch(() => { setError('Could not load data. Check your Script URL.'); setLoading(false); });
   }, []);
@@ -115,17 +125,14 @@ function useAttendance() {
       return next;
     });
 
-    // Debounce network call per (player, gameId)
+    // Send to Google Sheet via JSONP GET
     const key = `${player}_${gameId}`;
     clearTimeout(pendingRef.current[key]);
     pendingRef.current[key] = setTimeout(() => {
       const cur = data[player]?.[gameId];
       const val = cur === status ? null : status;
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        redirect: 'follow',
-        body: JSON.stringify({ player, gameId, status: val }),
-      }).catch(() => {}); // silent fail — optimistic update already applied
+      const params = 'action=set&player=' + encodeURIComponent(player) + '&gameId=' + encodeURIComponent(gameId) + '&status=' + encodeURIComponent(val||'');
+      jsonp(SCRIPT_URL + '?' + params).catch(() => {});
     }, 300);
   }, [data]);
 
